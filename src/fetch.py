@@ -1,5 +1,6 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from storage import save_record
 
 import requests
 from bs4 import BeautifulSoup
@@ -97,16 +98,7 @@ def estimate_people_count(status: str) -> int | None:
     # 営業時間外・休業日など
     return None
 
-def main():
-
+if __name__ == "__main__":
     record = fetch_pool_status()
 
-    print("=" * 40)
-    print("四街道市温水プール 利用状況")
-    print("=" * 40)
-
-    for key, value in record.items():
-        print(f"{key:10}: {value}")
-
-if __name__ == "__main__":
-    main()
+    print(record)
