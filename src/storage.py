@@ -1,8 +1,12 @@
-from pathlib import Path
 import csv
+import json
+import os
+from pathlib import Path
 
-DATA_DIR = Path("data")
+DATA_DIR = Path(os.environ.get("DATA_DIR", "data"))
+
 CSV_FILE = DATA_DIR / "history.csv"
+LATEST_FILE = DATA_DIR / "latest.json"
 
 FIELDNAMES = [
     "timestamp",
@@ -14,7 +18,7 @@ FIELDNAMES = [
 
 
 def get_last_record() -> dict | None:
-    """CSVの最後の1件を取得する"""
+    """history.csv の最後の1件を取得する"""
 
     if not CSV_FILE.exists():
         return None
@@ -29,7 +33,11 @@ def get_last_record() -> dict | None:
 
 
 def should_save(record: dict) -> bool:
-    """保存が必要か判定する"""
+    """
+    history.csvへ保存する必要があるか判定する
+
+    サイトの更新日時(updated)が変わった時だけ保存する。
+    """
 
     last = get_last_record()
 
@@ -39,9 +47,27 @@ def should_save(record: dict) -> bool:
     return last["updated"] != record["updated"]
 
 
-def save_record(record: dict) -> bool:
+def save_latest(record: dict) -> None:
     """
-    CSVへ保存する
+    最新状態を latest.json に保存する。
+
+    毎回上書きする。
+    """
+
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+    with open(LATEST_FILE, "w", encoding="utf-8") as f:
+        json.dump(
+            record,
+            f,
+            ensure_ascii=False,
+            indent=2,
+        )
+
+
+def save_history(record: dict) -> bool:
+    """
+    history.csvへ保存する。
 
     Returns
     -------
@@ -53,7 +79,7 @@ def save_record(record: dict) -> bool:
     if not should_save(record):
         return False
 
-    DATA_DIR.mkdir(exist_ok=True)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
 
     file_exists = CSV_FILE.exists()
 
@@ -69,3 +95,16 @@ def save_record(record: dict) -> bool:
         writer.writerow(record)
 
     return True
+
+
+def save_record(record: dict) -> bool:
+    """
+    取得データを保存する。
+
+    latest.json は毎回更新。
+    history.csv は更新があった時だけ追記。
+    """
+
+    save_latest(record)
+
+    return save_history(record)
