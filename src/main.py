@@ -1,6 +1,5 @@
-from fetch import fetch_pool_status
-from storage import save_record
-
+from src.fetch import fetch_pool_status
+from src.storage import save_record
 
 def print_record(record: dict) -> None:
     print("=" * 40)
@@ -15,9 +14,15 @@ def main():
 
     record = fetch_pool_status()
 
-    save_record(record)
+    saved = save_record(record)
 
     print_record(record)
+    print()
+
+    if saved:
+        print("CSVへ保存しました。")
+    else:
+        print("更新なしのため保存をスキップしました。")
 
 
 if __name__ == "__main__":
