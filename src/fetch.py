@@ -1,8 +1,10 @@
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 import requests
 from bs4 import BeautifulSoup
 
 URL = "http://yotsu-foundation.or.jp/onpool/"
-
 
 def fetch_pool_status():
     """プール利用状況を取得する"""
@@ -43,9 +45,30 @@ def fetch_pool_status():
             status = text
             break
 
-    return updated, status
+    return {
+    "timestamp": datetime.now(
+        ZoneInfo("Asia/Tokyo")
+    ).isoformat(timespec="seconds"),
+
+    "updated": updated,
+
+    "status": status,
+
+    "estimated": estimate_people_count(status),
+
+    "state": get_state(status)
+    }
 
 import re
+
+def get_state(status: str) -> str:
+    if "入場中" in status:
+        return "OPEN"
+
+    if "営業時間外" in status:
+        return "CLOSED"
+
+    return "HOLIDAY"
 
 def estimate_people_count(status: str) -> int | None:
     """
@@ -75,15 +98,15 @@ def estimate_people_count(status: str) -> int | None:
     return None
 
 def main():
-    updated, status = fetch_pool_status()
-    estimated = estimate_people_count(status)
+
+    record = fetch_pool_status()
 
     print("=" * 40)
     print("四街道市温水プール 利用状況")
     print("=" * 40)
-    print(f"更新日時 : {updated}")
-    print(f"利用状況 : {status}")
-    print(f"推定人数 : {estimated}")
+
+    for key, value in record.items():
+        print(f"{key:10}: {value}")
 
 if __name__ == "__main__":
     main()
