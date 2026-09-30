@@ -1,5 +1,9 @@
 from src.fetch import fetch_pool_status
-from src.storage import save_record
+from src.notifier import (
+    send_low_capacity_notification,
+    should_send_low_capacity_notification,
+)
+from src.storage import get_latest_record, save_record
 
 
 def print_record(record: dict) -> None:
@@ -12,8 +16,12 @@ def print_record(record: dict) -> None:
 
 
 def main():
-
     record = fetch_pool_status()
+
+    previous_record = get_latest_record()
+
+    if should_send_low_capacity_notification(record, previous_record):
+        send_low_capacity_notification(record)
 
     saved = save_record(record)
 
