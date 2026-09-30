@@ -17,6 +17,16 @@ FIELDNAMES = [
 ]
 
 
+def get_latest_record() -> dict | None:
+    """latest.json に保存された前回の最新状態を取得する。"""
+
+    if not LATEST_FILE.exists():
+        return None
+
+    with open(LATEST_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
 def get_last_record() -> dict | None:
     """history.csv の最後の1件を取得する"""
 
