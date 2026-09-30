@@ -1,0 +1,46 @@
+name: Test SMTP Email
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-smtp:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Send test email
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+        run: |
+          python - <<'PY'
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+
+          from src.notifier import send_low_capacity_notification
+
+          send_low_capacity_notification(
+              {
+                  "timestamp": datetime.now(
+                      ZoneInfo("Asia/Tokyo")
+                  ).isoformat(timespec="seconds"),
+                  "updated": "SMTP接続テスト",
+                  "estimated": 5,
+                  "state": "OPEN",
+              }
+          )
+          print("Test email sent successfully.")
+          PY
