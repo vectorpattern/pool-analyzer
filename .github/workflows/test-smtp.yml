@@ -40,7 +40,8 @@ jobs:
                   "updated": "SMTP接続テスト",
                   "estimated": 5,
                   "state": "OPEN",
-              }
+              },
+              subject="【テスト】四街道市温水プール：SMTP送信確認",
           )
           print("Test email sent successfully.")
           PY

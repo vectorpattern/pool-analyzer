@@ -89,6 +89,7 @@ class NotificationTests(unittest.TestCase):
         self.assertTrue(smtp.started_tls)
         self.assertEqual(smtp.credentials, ("user", "password"))
         self.assertTrue(smtp.closed)
+        self.assertEqual(smtp.message["Subject"], "四街道市温水プール：低混雑のお知らせ")
         self.assertIn("四街道市温水プール", smtp.message.get_content())
         self.assertIn("現在の推定利用人数: 5人", smtp.message.get_content())
         self.assertIn("サイトの更新日時: 09/30 09:58", smtp.message.get_content())

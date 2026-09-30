@@ -20,11 +20,16 @@ def should_send_low_capacity_notification(
     )
 
 
-def create_notification_message(record: dict, sender: str, recipient: str) -> EmailMessage:
+def create_notification_message(
+    record: dict,
+    sender: str,
+    recipient: str,
+    subject: str = "四街道市温水プール：低混雑のお知らせ",
+) -> EmailMessage:
     """低混雑通知メールを作成する。"""
 
     message = EmailMessage()
-    message["Subject"] = "四街道市温水プール：低混雑のお知らせ"
+    message["Subject"] = subject
     message["From"] = sender
     message["To"] = recipient
     message.set_content(
@@ -41,6 +46,7 @@ def send_low_capacity_notification(
     record: dict,
     smtp_factory: Callable[..., smtplib.SMTP] = smtplib.SMTP,
     environ: Mapping[str, str] | None = None,
+    subject: str = "四街道市温水プール：低混雑のお知らせ",
 ) -> None:
     """環境変数のSMTP設定を使って低混雑通知メールを送信する。"""
 
@@ -52,7 +58,7 @@ def send_low_capacity_notification(
     sender = settings["MAIL_FROM"]
     recipient = settings["MAIL_TO"]
 
-    message = create_notification_message(record, sender, recipient)
+    message = create_notification_message(record, sender, recipient, subject)
     smtp = smtp_factory(host, port)
 
     try:
