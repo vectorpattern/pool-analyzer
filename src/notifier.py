@@ -1,7 +1,7 @@
 import os
-import smtplib
 from collections.abc import Callable, Mapping
-from email.message import EmailMessage
+
+import requests
 
 
 def should_send_low_capacity_notification(
@@ -20,44 +20,30 @@ def should_send_low_capacity_notification(
     )
 
 
-def create_notification_message(record: dict, sender: str, recipient: str) -> EmailMessage:
-    """低混雑通知メールを作成する。"""
-
-    message = EmailMessage()
-    message["Subject"] = "四街道市温水プール：低混雑のお知らせ"
-    message["From"] = sender
-    message["To"] = recipient
-    message.set_content(
-        "四街道市温水プールの利用状況が0～9人程になりました。\n\n"
-        f"現在の推定利用人数: {record['estimated']}人\n"
-        f"サイトの更新日時: {record['updated']}\n"
-        f"データ取得日時: {record['timestamp']}\n"
-    )
-
-    return message
-
-
 def send_low_capacity_notification(
     record: dict,
-    smtp_factory: Callable[..., smtplib.SMTP] = smtplib.SMTP,
+    post: Callable[..., requests.Response] = requests.post,
     environ: Mapping[str, str] | None = None,
+    is_test: bool = False,
 ) -> None:
-    """環境変数のSMTP設定を使って低混雑通知メールを送信する。"""
+    """GAS Webアプリを経由して低混雑通知メールを送信する。"""
 
     settings = os.environ if environ is None else environ
-    host = settings["SMTP_HOST"]
-    port = int(settings["SMTP_PORT"])
-    username = settings["SMTP_USERNAME"]
-    password = settings["SMTP_PASSWORD"]
-    sender = settings["MAIL_FROM"]
-    recipient = settings["MAIL_TO"]
+    response = post(
+        settings["GAS_WEB_APP_URL"],
+        data={
+            "token": settings["GAS_WEBHOOK_TOKEN"],
+            "estimated": str(record["estimated"]),
+            "updated": record["updated"],
+            "timestamp": record["timestamp"],
+            "is_test": str(is_test).lower(),
+        },
+        timeout=10,
+    )
+    response.raise_for_status()
 
-    message = create_notification_message(record, sender, recipient)
-    smtp = smtp_factory(host, port)
+    result = response.json()
 
-    try:
-        smtp.starttls()
-        smtp.login(username, password)
-        smtp.send_message(message)
-    finally:
-        smtp.quit()
+    if result.get("status") != "success":
+        message = result.get("message", "GASがメール送信に失敗しました。")
+        raise RuntimeError(message)

@@ -1,31 +1,10 @@
 import unittest
+from unittest.mock import Mock
 
 from src.notifier import (
     send_low_capacity_notification,
     should_send_low_capacity_notification,
 )
-
-
-class FakeSMTP:
-    def __init__(self, host: str, port: int) -> None:
-        self.host = host
-        self.port = port
-        self.started_tls = False
-        self.credentials = None
-        self.message = None
-        self.closed = False
-
-    def starttls(self) -> None:
-        self.started_tls = True
-
-    def login(self, username: str, password: str) -> None:
-        self.credentials = (username, password)
-
-    def send_message(self, message) -> None:
-        self.message = message
-
-    def quit(self) -> None:
-        self.closed = True
 
 
 class NotificationTests(unittest.TestCase):
@@ -62,40 +41,46 @@ class NotificationTests(unittest.TestCase):
 
         self.assertFalse(should_send_low_capacity_notification(record, None))
 
-    def test_sends_email_through_injected_smtp_factory(self) -> None:
-        smtp_instances = []
-
-        def smtp_factory(host: str, port: int) -> FakeSMTP:
-            smtp = FakeSMTP(host, port)
-            smtp_instances.append(smtp)
-            return smtp
+    def test_sends_email_through_injected_post_function(self) -> None:
+        response = Mock()
+        response.json.return_value = {"status": "success"}
+        post = Mock(return_value=response)
 
         send_low_capacity_notification(
             self.record,
-            smtp_factory=smtp_factory,
+            post=post,
             environ={
-                "SMTP_HOST": "smtp.example.com",
-                "SMTP_PORT": "587",
-                "SMTP_USERNAME": "user",
-                "SMTP_PASSWORD": "password",
-                "MAIL_FROM": "from@example.com",
-                "MAIL_TO": "to@example.com",
+                "GAS_WEB_APP_URL": "https://script.google.com/macros/s/example/exec",
+                "GAS_WEBHOOK_TOKEN": "token",
             },
         )
 
-        smtp = smtp_instances[0]
-        self.assertEqual(smtp.host, "smtp.example.com")
-        self.assertEqual(smtp.port, 587)
-        self.assertTrue(smtp.started_tls)
-        self.assertEqual(smtp.credentials, ("user", "password"))
-        self.assertTrue(smtp.closed)
-        self.assertIn("四街道市温水プール", smtp.message.get_content())
-        self.assertIn("現在の推定利用人数: 5人", smtp.message.get_content())
-        self.assertIn("サイトの更新日時: 09/30 09:58", smtp.message.get_content())
-        self.assertIn(
-            "データ取得日時: 2026-09-30T10:00:00+09:00",
-            smtp.message.get_content(),
+        post.assert_called_once_with(
+            "https://script.google.com/macros/s/example/exec",
+            data={
+                "token": "token",
+                "estimated": "5",
+                "updated": "09/30 09:58",
+                "timestamp": "2026-09-30T10:00:00+09:00",
+                "is_test": "false",
+            },
+            timeout=10,
         )
+        response.raise_for_status.assert_called_once_with()
+
+    def test_raises_when_gas_returns_an_error(self) -> None:
+        response = Mock()
+        response.json.return_value = {"status": "error", "message": "unauthorized"}
+
+        with self.assertRaisesRegex(RuntimeError, "unauthorized"):
+            send_low_capacity_notification(
+                self.record,
+                post=Mock(return_value=response),
+                environ={
+                    "GAS_WEB_APP_URL": "https://script.google.com/macros/s/example/exec",
+                    "GAS_WEBHOOK_TOKEN": "token",
+                },
+            )
 
 
 if __name__ == "__main__":

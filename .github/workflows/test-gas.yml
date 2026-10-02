@@ -1,0 +1,44 @@
+name: Test GAS Email
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-gas:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - run: pip install -r requirements.txt
+
+      - name: Send test email
+        env:
+          GAS_WEB_APP_URL: ${{ secrets.GAS_WEB_APP_URL }}
+          GAS_WEBHOOK_TOKEN: ${{ secrets.GAS_WEBHOOK_TOKEN }}
+        run: |
+          python - <<'PY'
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+
+          from src.notifier import send_low_capacity_notification
+
+          send_low_capacity_notification(
+              {
+                  "timestamp": datetime.now(
+                      ZoneInfo("Asia/Tokyo")
+                  ).isoformat(timespec="seconds"),
+                  "updated": "GAS接続テスト",
+                  "estimated": 5,
+              },
+              is_test=True,
+          )
+          print("Test email sent successfully.")
+          PY
