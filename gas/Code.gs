@@ -21,11 +21,10 @@ function doPost(e) {
   const isTest = data.is_test === "true";
   const subject = isTest
     ? "【テスト】四街道市温水プール：GAS送信確認"
-    : "四街道市温水プール：低混雑のお知らせ";
+    : "【四街道市温水プール】今がチャンスです！";
   const body =
     (isTest ? "これはGAS経由のテストメールです。\n\n" : "") +
     "四街道市温水プールの利用状況が0～9人程になりました。\n\n" +
-    "現在の推定利用人数: " + data.estimated + "人\n" +
     "サイトの更新日時: " + data.updated + "\n" +
     "データ取得日時: " + data.timestamp + "\n";
 
