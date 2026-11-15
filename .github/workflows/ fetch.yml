@@ -53,3 +53,20 @@ jobs:
 
           git commit -m "Update pool history"
           git push origin HEAD:main
+
+      - name: Diagnose pool site connection
+        run: |
+          echo "Runner public IPv4"
+          curl -4fsS --max-time 5 https://api.ipify.org || true
+          echo
+
+          echo "DNS results"
+          getent ahosts yotsu-foundation.or.jp || true
+
+          for scheme in http https; do
+            echo "Checking ${scheme}"
+            curl -sS -L -o /dev/null \
+              --connect-timeout 5 --max-time 15 \
+              --write-out 'remote_ip=%{remote_ip} http_code=%{http_code} final_url=%{url_effective}\n' \
+              "${scheme}://yotsu-foundation.or.jp/onpool/" || true
+          done
